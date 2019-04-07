@@ -1,0 +1,153 @@
+---
+output: html_document
+---
+
+# Multiple regression Analysis: inference
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(stargazer)
+library(car)
+
+```
+
+## t-test
+
+```{r}
+# CV for alpha=5% and 1% using the t distribution with 137 d.f.:
+alpha <- c(0.05, 0.01)
+qt(1-alpha/2, 137)
+
+# Critical values for alpha=5% and 1% using the normal approximation:
+qnorm(1-alpha/2)
+```
+
+```{r}
+data(gpa1, package='wooldridge')
+
+# Store results under "sumres" and display full table:
+( sumres <- summary( lm(colGPA ~ hsGPA+ACT+skipped, data=gpa1) ) )
+
+# Manually confirm the formulas: Extract coefficients and SE
+regtable <- sumres$coefficients
+bhat <- regtable[,1]
+se   <- regtable[,2]
+
+# Reproduce t statistic
+( tstat <- bhat / se )
+# Reproduce p value
+( pval  <- 2*pt(-abs(tstat),137) )
+```
+
+```{r}
+# CV for alpha=5% and 1% using the t distribution with 522 d.f.:
+alpha <- c(0.05, 0.01)
+qt(1-alpha, 522)
+
+# Critical values for alpha=5% and 1% using the normal approximation:
+qnorm(1-alpha)
+```
+
+```{r}
+data(wage1, package='wooldridge')
+
+# OLS regression:
+summary( lm(log(wage) ~ educ+exper+tenure, data=wage1) )
+```
+
+```{r}
+data(rdchem, package='wooldridge')
+
+# OLS regression:
+myres <- lm(log(rd) ~ log(sales)+profmarg, data=rdchem)
+
+# Regression output:
+summary(myres)
+
+# 95% CI:
+confint(myres)
+
+# 99% CI:
+confint(myres, level=0.99)
+```
+
+## F-test
+
+```{r}
+# CV for alpha=1% using the F distribution with 3 and 347 d.f.:
+qf(1-0.01, 3,347)
+```
+
+```{r}
+data(mlb1, package='wooldridge')
+
+# Unrestricted OLS regression:
+res.ur <- lm(log(salary) ~ years+gamesyr+bavg+hrunsyr+rbisyr, data=mlb1)
+
+# Restricted OLS regression:
+res.r <- lm(log(salary) ~ years+gamesyr, data=mlb1)
+
+# R2:
+( r2.ur <- summary(res.ur)$r.squared )
+( r2.r <- summary(res.r)$r.squared )
+
+# F statistic:
+( F <- (r2.ur-r2.r) / (1-r2.ur) * 347/3 )
+
+# p value = 1-cdf of the appropriate F distribution:
+1-pf(F, 3,347)
+```
+
+```{r}
+data(mlb1, package='wooldridge')
+
+# Unrestricted OLS regression:
+res.ur <- lm(log(salary) ~ years+gamesyr+bavg+hrunsyr+rbisyr, data=mlb1)
+
+# F test
+myH0 <- c("bavg","hrunsyr","rbisyr")
+linearHypothesis(res.ur, myH0)
+```
+
+```{r}
+# F test (F-Test-MLB-auto.R has to be run first!)
+myH0 <- c("bavg", "hrunsyr=2*rbisyr")
+linearHypothesis(res.ur, myH0)
+```
+
+```{r}
+# Note: Script "F-Test-MLB-auto.R" has to be run first to create res.ur.
+# Which variables used in res.ur contain "yr" in their names?
+myH0 <- matchCoefs(res.ur,"yr")
+myH0
+
+# F test (F-Test-MLB-auto.R has to be run first!)
+linearHypothesis(res.ur, myH0)
+```
+
+```{r}
+data(meap93, package='wooldridge')
+
+# define new variable within data frame
+meap93$b_s <- meap93$benefits / meap93$salary
+
+# Estimate three different models
+model1<- lm(log(salary) ~ b_s                       , data=meap93)
+model2<- lm(log(salary) ~ b_s+log(enroll)+log(staff), data=meap93)
+model3<- lm(log(salary) ~ b_s+log(enroll)+log(staff)+droprate+gradrate
+                                                    , data=meap93)
+stargazer(list(model1,model2,model3),type="text",keep.stat=c("n","rsq"))
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+

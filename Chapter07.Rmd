@@ -1,0 +1,104 @@
+---
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(car)
+
+```
+
+# Multiple regression Analysis with Qualitative information: Binary (or Dummy) Variables
+
+## Dummy Variable
+
+```{r}
+data(wage1, package='wooldridge')
+
+lm(wage ~ female+educ+exper+tenure, data=wage1)
+```
+
+```{r}
+data(wage1, package='wooldridge')
+
+lm(log(wage)~married*female+educ+exper+I(exper^2)+tenure+I(tenure^2),
+                                                           data=wage1)
+```
+
+## Logical Variables
+
+```{r}
+data(wage1, package='wooldridge')
+
+# replace "female" with logical variable
+wage1$female <- as.logical(wage1$female)
+table(wage1$female)
+  
+# regression with logical variable
+lm(wage ~ female+educ+exper+tenure, data=wage1)
+```
+
+## Factor 
+
+```{r}
+data(CPS1985,package="AER")
+
+# Table of categories and frequencies for two factor variables:
+table(CPS1985$gender)
+table(CPS1985$occupation)
+
+# Directly using factor variables in regression formula:
+lm(log(wage) ~ education+experience+gender+occupation, data=CPS1985)
+
+# Manually redefine the  reference category:
+CPS1985$gender <- relevel(CPS1985$gender,"female")
+CPS1985$occupation <- relevel(CPS1985$occupation,"management")
+
+# Rerun regression:
+lm(log(wage) ~ education+experience+gender+occupation, data=CPS1985)
+```
+
+```{r}
+data(lawsch85, package='wooldridge')
+
+# Define cut points for the rank
+cutpts <- c(0,10,25,40,60,100,175)
+
+# Create factor variable containing ranges for the rank
+lawsch85$rankcat <- cut(lawsch85$rank, cutpts)
+
+# Display frequencies
+table(lawsch85$rankcat)
+
+# Choose reference category
+lawsch85$rankcat <- relevel(lawsch85$rankcat,"(100,175]")
+
+# Run regression
+(res <- lm(log(salary)~rankcat+LSAT+GPA+log(libvol)+log(cost), data=lawsch85))
+
+# ANOVA table
+car::Anova(res)
+```
+
+```{r}
+data(gpa3, package='wooldridge')
+
+# Model with full interactions with female dummy (only for spring data)
+reg<-lm(cumgpa~female*(sat+hsperc+tothrs), data=gpa3, subset=(spring==1))
+summary(reg)
+
+# F-Test from package "car". H0: the interaction coefficients are zero
+# matchCoefs(...) selects all coeffs with names containing "female"
+linearHypothesis(reg, matchCoefs(reg, "female"))
+```
+
+```{r}
+data(gpa3, package='wooldridge')
+
+# Estimate model for males (& spring data)
+lm(cumgpa~sat+hsperc+tothrs, data=gpa3, subset=(spring==1&female==0))
+
+# Estimate model for females (& spring data)
+lm(cumgpa~sat+hsperc+tothrs, data=gpa3, subset=(spring==1&female==1))
+```
+

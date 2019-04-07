@@ -1,0 +1,89 @@
+---
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dynlm)
+library(stargazer)
+library(zoo)
+library(quantmod)
+
+```
+
+# further issues in Using OLS with time series Data
+
+```{r}
+data(nyse, package='wooldridge')
+
+# Define time series (numbered 1,...,n)
+tsdata <- ts(nyse)
+
+# Linear regression of models with lags:
+reg1 <- dynlm(return~L(return)                        , data=tsdata) 
+reg2 <- dynlm(return~L(return)+L(return,2)            , data=tsdata) 
+reg3 <- dynlm(return~L(return)+L(return,2)+L(return,3), data=tsdata) 
+
+# Pretty regression table
+stargazer(reg1, reg2, reg3, type="text",
+                            keep.stat=c("n","rsq","adj.rsq","f"))
+```
+
+```{r}
+
+# Download data using the quantmod package:
+getSymbols("AAPL", auto.assign = TRUE)
+
+# Calculate return as the log difference
+ret <- diff( log(AAPL$AAPL.Adjusted) )
+# Subset 2008-2016 by special xts indexing:
+ret <- ret["2008/2016"]
+
+# Plot returns
+plot(ret)
+
+# Linear regression of models with lags:
+ret <- as.zoo(ret)  # dynlm cannot handle xts objects
+reg1 <- dynlm(ret~L(ret) ) 
+reg2 <- dynlm(ret~L(ret)+L(ret,2) ) 
+reg3 <- dynlm(ret~L(ret)+L(ret,2)+L(ret,3) ) 
+
+# Pretty regression table
+stargazer(reg1, reg2, reg3, type="text",
+                            keep.stat=c("n","rsq","adj.rsq","f"))
+```
+
+```{r}
+# Initialize Random Number Generator
+set.seed(348546)
+# initial graph
+plot(c(0,50),c(0,0),type="l",lwd=2,ylim=c(-18,18))
+
+# loop over draws:
+for(r in 1:30) {
+  # i.i.d. standard normal shock
+  e <- rnorm(50)
+  # Random walk as cumulative sum of shocks
+  y <- ts(cumsum(e))
+  # Add line to graph
+  lines(y, col=gray(.6))
+}
+```
+
+```{r}
+# Libraries for dynamic lm and "stargazer" regression table 
+data(fertil3, package='wooldridge')
+
+# Define Yearly time series beginning in 1913
+tsdata <- ts(fertil3, start=1913)
+
+# Linear regression of model with first differences:
+res1 <- dynlm( d(gfr) ~ d(pe), data=tsdata)
+
+# Linear regression of model with lagged differences:
+res2 <- dynlm( d(gfr) ~ d(pe) + L(d(pe)) + L(d(pe),2), data=tsdata)
+
+# Pretty regression table
+stargazer(res1,res2,type="text")
+```
+

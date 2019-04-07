@@ -1,0 +1,124 @@
+---
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(car)
+library(lmtest)
+library(quantreg)
+library(stargazer)
+
+```
+
+# More on specification and Data issues
+
+```{r}
+data(hprice1, package='wooldridge')
+
+# original linear regression
+orig <- lm(price ~ lotsize+sqrft+bdrms, data=hprice1)
+
+# regression for RESET test
+RESETreg <- lm(price ~ lotsize+sqrft+bdrms+I(fitted(orig)^2)+ 
+                                        I(fitted(orig)^3), data=hprice1)
+RESETreg
+
+# RESET test. H0: all coeffs including "fitted" are=0 
+linearHypothesis(RESETreg, matchCoefs(RESETreg,"fitted"))
+```
+
+```{r}
+data(hprice1, package='wooldridge')
+
+# original linear regression
+orig <- lm(price ~ lotsize+sqrft+bdrms, data=hprice1)
+
+# RESET test
+resettest(orig)
+```
+
+```{r}
+data(hprice1, package='wooldridge')
+
+# two alternative models
+model1 <- lm(price ~     lotsize  +     sqrft  + bdrms, data=hprice1)
+model2 <- lm(price ~ log(lotsize) + log(sqrft) + bdrms, data=hprice1)
+
+# Test against comprehensive model
+encomptest(model1,model2, data=hprice1)
+```
+
+```{r}
+x <- c(-1,0,1,NA,NaN,-Inf,Inf)
+logx <- log(x)
+invx <- 1/x
+ncdf <- pnorm(x)
+isna <- is.na(x)
+
+data.frame(x,logx,invx,ncdf,isna)
+```
+
+```{r}
+data(lawsch85, package='wooldridge')
+
+# extract LSAT
+lsat <- lawsch85$LSAT
+
+# Create logical indicator for missings
+missLSAT <- is.na(lawsch85$LSAT)
+
+# LSAT and indicator for Schools No. 120-129:
+rbind(lsat,missLSAT)[,120:129]
+
+# Frequencies of indicator
+table(missLSAT)
+
+# Missings for all variables in data frame (counts)
+colSums(is.na(lawsch85))
+
+# Indicator for complete cases
+compl <- complete.cases(lawsch85)
+table(compl)
+```
+
+```{r}
+data(lawsch85, package='wooldridge')
+
+# Mean of a variable with missings:
+mean(lawsch85$LSAT)
+mean(lawsch85$LSAT,na.rm=TRUE)
+
+# Regression with missings
+summary(lm(log(salary)~LSAT+cost+age, data=lawsch85))
+```
+
+```{r}
+data(rdchem, package='wooldridge')
+
+# Regression
+reg <- lm(rdintens~sales+profmarg, data=rdchem)
+
+# Studentized residuals for all observations:
+studres <- rstudent(reg)
+
+# Display extreme values:
+min(studres)
+max(studres)
+
+# Histogram (and overlayed density plot):
+hist(studres, freq=FALSE)
+lines(density(studres), lwd=2)
+```
+
+```{r}
+data(rdchem, package='wooldridge')
+
+# OLS Regression
+ols <- lm(rdintens ~ I(sales/1000) +profmarg, data=rdchem)
+# LAD Regression
+lad <- rq(rdintens ~ I(sales/1000) +profmarg, data=rdchem)
+
+# regression table
+stargazer(ols,lad,  type = "text")
+```

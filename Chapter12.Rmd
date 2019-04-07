@@ -1,0 +1,133 @@
+---
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dynlm)
+library(lmtest)
+library(car)
+library(zoo)
+library(quantmod)
+library(stargazer)
+```
+
+# Serial Correlation and Heteroskedasticity in time series regressions
+
+```{r}
+data(phillips, package='wooldridge')
+
+# Define Yearly time series beginning in 1948
+tsdata <- ts(phillips, start=1948)
+
+# Estimation of static Phillips curve:
+reg.s <- dynlm( inf ~ unem, data=tsdata, end=1996)
+# residuals and AR(1) test:
+residual.s <- resid(reg.s)
+coeftest( dynlm(residual.s ~ L(residual.s)) )
+
+# Same with expectations-augmented Phillips curve:
+reg.ea <- dynlm( d(inf) ~ unem, data=tsdata, end=1996)
+residual.ea <- resid(reg.ea)
+coeftest( dynlm(residual.ea ~ L(residual.ea)) )
+```
+There is no evidence of AR(1) serial correlation in the expectations augmented Phillips curve.
+
+```{r}
+data(barium, package='wooldridge')
+
+tsdata <- ts(barium, start=c(1978,2), frequency=12)
+
+reg <- dynlm(log(chnimp)~log(chempi)+log(gas)+log(rtwex)+
+                                  befile6+affile6+afdec6, data=tsdata )
+
+# Pedestrian test: 
+residual <- resid(reg)
+resreg <- dynlm(residual ~ L(residual)+L(residual,2)+L(residual,3)+
+                           log(chempi)+log(gas)+log(rtwex)+befile6+
+                                          affile6+afdec6, data=tsdata )
+linearHypothesis(resreg, 
+                 c("L(residual)","L(residual, 2)","L(residual, 3)"))
+
+# Automatic test:
+bgtest(reg, order=3, type="F")
+
+```
+
+```{r}
+data(phillips, package='wooldridge')
+
+tsdata <- ts(phillips, start=1948)
+
+# Estimation of both Phillips curve models:
+reg.s <- dynlm( inf ~ unem, data=tsdata, end=1996)
+reg.ea <- dynlm( d(inf) ~ unem, data=tsdata, end=1996)
+
+# DW tests
+dwtest(reg.s)
+dwtest(reg.ea)
+```
+
+```{r}
+data(barium, package='wooldridge')
+
+tsdata <- ts(barium, start=c(1978,2), frequency=12)
+
+# OLS estimation
+olsres <- dynlm(log(chnimp)~log(chempi)+log(gas)+log(rtwex)+
+      befile6+affile6+afdec6, data=tsdata)
+
+# Cochrane-Orcutt estimation
+cochrane.orcutt(olsres)
+```
+
+```{r}
+data(prminwge, package='wooldridge')
+
+tsdata <- ts(prminwge, start=1950)
+
+# OLS regression
+reg<-dynlm(log(prepop)~log(mincov)+log(prgnp)+log(usgnp)+trend(tsdata), 
+                                                          data=tsdata )
+# results with usual SE
+coeftest(reg)
+# results with HAC SE
+coeftest(reg, vcovHAC)
+```
+
+```{r}
+data(nyse, package='wooldridge')
+
+tsdata <- ts(nyse)
+
+# Linear regression of model:
+reg <- dynlm(return ~ L(return), data=tsdata) 
+
+# squared residual
+residual.sq <- resid(reg)^2
+
+# Model for squared residual:
+ARCHreg <- dynlm(residual.sq ~ L(residual.sq)) 
+coeftest(ARCHreg)
+```
+
+```{r}
+# Download data using the quantmod package:
+getSymbols("AAPL", auto.assign = TRUE)
+
+# Calculate return as the log difference
+ret <- diff( log(AAPL$AAPL.Adjusted) )
+# Subset 2008-2016 by special xts indexing:
+ret <- ret["2008/2016"]
+
+# AR(1) model for returns
+ret <- as.zoo(ret)
+reg <- dynlm( ret ~ L(ret) ) 
+
+# squared residual
+residual.sq <- resid(reg)^2
+
+# Model for squared residual:
+ARCHreg <- dynlm(residual.sq ~ L(residual.sq)) 
+summary(ARCHreg)
+```

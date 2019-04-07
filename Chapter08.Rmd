@@ -1,0 +1,114 @@
+---
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(lmtest)
+library(car)
+library(lmtest)
+library(foreign)
+
+```
+
+# Heteroskedasticity
+
+```{r}
+data(gpa3, package='wooldridge')
+
+# Estimate model (only for spring data)
+reg <- lm(cumgpa~sat+hsperc+tothrs+female+black+white, 
+                                     data=gpa3, subset=(spring==1))
+# Usual SE:
+coeftest(reg)
+# Refined White heteroscedasticity-robust SE:
+coeftest(reg, vcov=hccm)
+```
+
+```{r}
+# F-Tests using different variance-covariance formulas:
+myH0 <- c("black","white")
+# Ususal VCOV
+linearHypothesis(reg, myH0)
+# Refined White VCOV
+linearHypothesis(reg, myH0, vcov=hccm)
+# Classical White VCOV
+linearHypothesis(reg, myH0, vcov=hccm(reg,type="hc0"))
+```
+
+```{r}
+data(hprice1, package='wooldridge')
+
+# Estimate model
+reg <- lm(price~lotsize+sqrft+bdrms, data=hprice1)
+reg
+
+# Automatic BP test
+bptest(reg)
+
+# Manual regression of squared residuals 
+summary(lm( resid(reg)^2 ~ lotsize+sqrft+bdrms, data=hprice1))
+```
+
+```{r}
+data(hprice1, package='wooldridge')
+
+# Estimate model
+reg <- lm(log(price)~log(lotsize)+log(sqrft)+bdrms, data=hprice1)
+reg
+
+# BP test
+bptest(reg)
+
+# White test
+bptest(reg, ~ fitted(reg) + I(fitted(reg)^2) )
+```
+
+```{r}
+d401k<-read.dta("http://fmwww.bc.edu/ec-p/data/wooldridge/401ksubs.dta")
+
+# OLS (only for singles: fsize==1)
+lm(nettfa ~ inc + I((age-25)^2) + male + e401k, 
+                                         data=d401k, subset=(fsize==1))
+
+# WLS
+lm(nettfa ~ inc + I((age-25)^2) + male + e401k, weight=1/inc, 
+                                         data=d401k, subset=(fsize==1))
+```
+
+```{r}
+data(smoke, package='wooldridge')
+
+# OLS
+olsreg<-lm(cigs~log(income)+log(cigpric)+educ+age+I(age^2)+restaurn, 
+                                                            data=smoke)
+olsreg
+
+# BP test
+bptest(olsreg)
+
+# FGLS: estimation of the variance function
+logu2 <- log(resid(olsreg)^2)
+varreg<-lm(logu2~log(income)+log(cigpric)+educ+age+I(age^2)+restaurn, 
+                                                            data=smoke)
+
+# FGLS: WLS
+w <- 1/exp(fitted(varreg))
+lm(cigs~log(income)+log(cigpric)+educ+age+I(age^2)+restaurn, 
+                                                  weight=w ,data=smoke)
+```
+
+```{r}
+d401k<-read.dta("http://fmwww.bc.edu/ec-p/data/wooldridge/401ksubs.dta")
+
+# WLS
+wlsreg <- lm(nettfa ~ inc + I((age-25)^2) + male + e401k, 
+                             weight=1/inc, data=d401k, subset=(fsize==1))
+
+# non-robust results
+coeftest(wlsreg)
+
+# robust results (Refined White SE:)
+coeftest(wlsreg,hccm)
+```
+
